@@ -3,7 +3,7 @@ name: Android CI
 on:
   push:
     #branches: [ master ]
-  pull_request:
+#  pull_request:
     #branches: [ master ]
   workflow_dispatch:
 
@@ -36,15 +36,16 @@ jobs:
           cd doom
           ../gradlew assembleRelease
 
-   # - uses: r0adkll/sign-android-release@v1
-    #  name: Sign app APK
+    - uses: Tlaster/android-sign@v1
+      name: Sign app APK
       # ID used to access action output
-     # id: sign_app
-   #   with:
-     #   releaseDirectory: build/outputs/apk/release
-      #  signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-      #  alias: ${{ secrets.ALIAS }}
-        #keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+      id: sign_app
+      with:
+        releaseDirectory: build/outputs/apk/release
+        signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+        alias: ${{ secrets.ALIAS }}
+        keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+        output: build/outputs/apk/release/signed
 
     - uses: actions/upload-artifact@v3
       name: upload APKs

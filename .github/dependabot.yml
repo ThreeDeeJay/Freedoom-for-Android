@@ -1,0 +1,19 @@
+version: 2
+
+updates:
+  - package-ecosystem: gitsubmodule
+    schedule:
+        interval: "daily"
+    directory: /
+  - package-ecosystem: gradle
+    schedule:
+        interval: "daily"
+    directory: /
+  - package-ecosystem: gradle
+    schedule:
+        interval: "daily"
+    directory: /doom/
+  - package-ecosystem: gradle
+    schedule:
+        interval: "daily"
+    directory: /touchcontrols/

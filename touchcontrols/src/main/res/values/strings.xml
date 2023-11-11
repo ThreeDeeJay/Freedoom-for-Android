@@ -1,11 +1,11 @@
 <resources>
     <string name="app_name">Touch Controls</string>
 
-    // gamepad fragment
+    <!--// gamepad fragment-->
     <string name="enable_game_pad_toggle">Enable Game Pad</string>
     <string name="hide_touch_controls_toggle">Hide Touch Controls</string>
 
-    // gamepad fragment options
+    <!--// gamepad fragment options-->
     <string name="look_up_down_option">Look Up/Look Down</string>
     <string name="look_left_right_option">Look Left/Look Right</string>
     <string name="forward_back_option">Forward/Back</string>

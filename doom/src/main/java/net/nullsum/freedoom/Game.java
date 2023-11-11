@@ -27,256 +27,262 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.Window;
 import android.view.WindowManager;
-
 import com.beloko.libsdl.SDLLib;
 import com.beloko.touchcontrols.ControlInterpreter;
 import com.beloko.touchcontrols.ShowKeyboard;
 import com.beloko.touchcontrols.TouchControlsEditing;
 import com.beloko.touchcontrols.TouchControlsSettings;
 import com.beloko.touchcontrols.TouchSettings;
-
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
-
 public class Game extends Activity implements Handler.Callback {
 
-    String LOG = "Game";
+  String LOG = "Game";
 
-    Activity act;
-    int surfaceWidth = -1, surfaceHeight;
-    int resDiv = 1;
-    private ControlInterpreter controlInterp;
-    private String args;
-    private String gamePath;
-    private boolean setupLaunch; //True if the native setup program launched this
-    private GameView mGLSurfaceView = null;
-    private QuakeRenderer mRenderer = new QuakeRenderer();
-    private Handler handlerUI;
+  Activity act;
+  int surfaceWidth = -1, surfaceHeight;
+  int resDiv = 1;
+  private ControlInterpreter controlInterp;
+  private String args;
+  private String gamePath;
+  private boolean setupLaunch; // True if the native setup program launched this
+  private GameView mGLSurfaceView = null;
+  private QuakeRenderer mRenderer = new QuakeRenderer();
+  private Handler handlerUI;
 
-    /**
-     * Called when the activity is first created.
-     */
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+  /** Called when the activity is first created. */
+  @Override
+  public void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
 
-        act = this;
+    act = this;
 
-        handlerUI = new Handler(this);
+    handlerUI = new Handler(this);
 
-        AppSettings.reloadSettings(getApplication());
+    AppSettings.reloadSettings(getApplication());
 
-        args = getIntent().getStringExtra("args");
-        gamePath = getIntent().getStringExtra("game_path");
-        setupLaunch = getIntent().getBooleanExtra("setup_launch", false);
-        resDiv = getIntent().getIntExtra("res_div", 1);
+    args = getIntent().getStringExtra("args");
+    gamePath = getIntent().getStringExtra("game_path");
+    setupLaunch = getIntent().getBooleanExtra("setup_launch", false);
+    resDiv = getIntent().getIntExtra("res_div", 1);
 
-        // fullscreen
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+    // fullscreen
+    requestWindowFeature(Window.FEATURE_NO_TITLE);
+    getWindow()
+        .setFlags(
+            WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
-        // keep screen on
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
-                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    // keep screen on
+    getWindow()
+        .setFlags(
+            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
+            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        Utils.setImmersionMode(this);
+    Utils.setImmersionMode(this);
 
-        start_game();
+    start_game();
+  }
+
+  @Override
+  public void onWindowFocusChanged(boolean hasFocus) {
+    super.onWindowFocusChanged(hasFocus);
+    Utils.onWindowFocusChanged(this, hasFocus);
+  }
+
+  public void start_game() {
+
+    NativeLib.loadLibraries();
+
+    NativeLib engine = new NativeLib();
+
+    controlInterp =
+        new ControlInterpreter(
+            engine,
+            Utils.getGameGamepadConfig(this.getResources()),
+            TouchSettings.gamePadControlsFile,
+            TouchSettings.gamePadEnabled);
+
+    TouchControlsSettings.setup(act, engine);
+    TouchControlsSettings.loadSettings(act);
+    TouchControlsSettings.sendToQuake();
+
+    TouchControlsEditing.setup(act);
+
+    mGLSurfaceView = new GameView(this);
+
+    NativeLib.gv = mGLSurfaceView;
+
+    ShowKeyboard.setup(act, mGLSurfaceView);
+
+    mGLSurfaceView.setEGLConfigChooser(new BestEglChooser(getApplicationContext()));
+
+    mGLSurfaceView.setRenderer(mRenderer);
+
+    // This will keep the screen on, while your view is visible.
+    mGLSurfaceView.setKeepScreenOn(true);
+
+    setContentView(mGLSurfaceView);
+    mGLSurfaceView.requestFocus();
+    mGLSurfaceView.setFocusableInTouchMode(true);
+  }
+
+  @Override
+  protected void onPause() {
+    Log.i(LOG, "onPause");
+    SDLLib.nativePause();
+    SDLLib.onPause();
+    super.onPause();
+  }
+
+  @Override
+  protected void onResume() {
+    Log.i(LOG, "onResume");
+    SDLLib.nativeResume();
+    SDLLib.onResume();
+    super.onResume();
+    mGLSurfaceView.onResume();
+  }
+
+  @Override
+  protected void onDestroy() {
+    Log.i(LOG, "onDestroy");
+    super.onDestroy();
+    System.exit(0);
+  }
+
+  @Override
+  public boolean handleMessage(Message msg) {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
+  ///////////// GLSurfaceView.Renderer implementation ///////////
+
+  class GameView extends MyGLSurfaceView {
+
+    /*--------------------
+     * Event handling
+     *--------------------*/
+
+    public GameView(Context context) {
+      super(context);
     }
 
     @Override
-    public void onWindowFocusChanged(boolean hasFocus) {
-        super.onWindowFocusChanged(hasFocus);
-        Utils.onWindowFocusChanged(this, hasFocus);
-    }
-
-
-    public void start_game() {
-
-        NativeLib.loadLibraries();
-
-        NativeLib engine = new NativeLib();
-
-        controlInterp = new ControlInterpreter(engine, Utils.getGameGamepadConfig(this.getResources()), TouchSettings.gamePadControlsFile, TouchSettings.gamePadEnabled);
-
-        TouchControlsSettings.setup(act, engine);
-        TouchControlsSettings.loadSettings(act);
-        TouchControlsSettings.sendToQuake();
-
-        TouchControlsEditing.setup(act);
-
-        mGLSurfaceView = new GameView(this);
-
-        NativeLib.gv = mGLSurfaceView;
-
-        ShowKeyboard.setup(act, mGLSurfaceView);
-
-        mGLSurfaceView.setEGLConfigChooser(new BestEglChooser(getApplicationContext()));
-
-        mGLSurfaceView.setRenderer(mRenderer);
-
-        // This will keep the screen on, while your view is visible.
-        mGLSurfaceView.setKeepScreenOn(true);
-
-        setContentView(mGLSurfaceView);
-        mGLSurfaceView.requestFocus();
-        mGLSurfaceView.setFocusableInTouchMode(true);
-    }
-
-
-    @Override
-    protected void onPause() {
-        Log.i(LOG, "onPause");
-        SDLLib.nativePause();
-        SDLLib.onPause();
-        super.onPause();
+    public boolean onGenericMotionEvent(MotionEvent event) {
+      return controlInterp.onGenericMotionEvent(event);
     }
 
     @Override
-    protected void onResume() {
-        Log.i(LOG, "onResume");
-        SDLLib.nativeResume();
-        SDLLib.onResume();
-        super.onResume();
-        mGLSurfaceView.onResume();
+    public boolean onTouchEvent(MotionEvent event) {
+      return controlInterp.onTouchEvent(event);
     }
 
     @Override
-    protected void onDestroy() {
-        Log.i(LOG, "onDestroy");
-        super.onDestroy();
-        System.exit(0);
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+      return controlInterp.onKeyDown(keyCode, event);
     }
 
     @Override
-    public boolean handleMessage(Message msg) {
-        // TODO Auto-generated method stub
-        return false;
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+      return controlInterp.onKeyUp(keyCode, event);
+    }
+  } // end of QuakeView
+
+  class QuakeRenderer implements MyGLSurfaceView.Renderer {
+
+    boolean divDone = false;
+    //// new Renderer interface
+    int notifiedflags;
+    boolean SDLinited = false;
+
+    public void onSurfaceCreated(GL10 gl, EGLConfig config) {
+      Log.d("Renderer", "onSurfaceCreated");
     }
 
+    private void init(int width, int height) {
 
-    ///////////// GLSurfaceView.Renderer implementation ///////////
+      Log.i(LOG, "screen size : " + width + "x" + height);
 
-    class GameView extends MyGLSurfaceView {
+      NativeLib.setScreenSize(width, height);
 
-        /*--------------------
-         * Event handling
-         *--------------------*/
+      Utils.copyPNGAssets(getApplicationContext(), AppSettings.graphicsDir);
 
-        public GameView(Context context) {
-            super(context);
+      Log.i(LOG, "Quake2Init start");
+
+      // args = "-width 1280 -height 736 +set vid_renderer 1 -iwad tnt.wad -file brutal19.pk3 +set
+      // fluid_patchset /sdcard/WeedsGM3.sf2";
+      // args = "+set vid_renderer 1 ";
+      String gzdoom_args =
+          "-width "
+              + surfaceWidth / resDiv
+              + " -height "
+              + surfaceHeight / resDiv
+              + " +set vid_renderer 1 ";
+      String[] args_array = Utils.createArgs(args + gzdoom_args);
+
+      int audioSample = AudioTrack.getNativeOutputSampleRate(AudioTrack.MODE_STREAM);
+      Log.d(LOG, "audioSample = " + audioSample);
+
+      if ((audioSample != 48000) && (audioSample != 44100)) // Just in case
+      audioSample = 48000;
+
+      int ret = NativeLib.init(AppSettings.graphicsDir, audioSample, args_array, 0, gamePath);
+
+      Log.i(LOG, "Quake2Init done");
+    }
+
+    public void onDrawFrame(GL10 gl) {
+
+      Log.d("Renderer", "onDrawFrame");
+
+      if (!divDone) {
+        handlerUI.post(
+            () -> {
+              mGLSurfaceView
+                  .getHolder()
+                  .setFixedSize(surfaceWidth / resDiv, surfaceHeight / resDiv);
+              divDone = true;
+            });
+      }
+
+      if (divDone) {
+        init(surfaceWidth / resDiv, surfaceHeight / resDiv);
+      } else {
+        try {
+          Thread.sleep(200);
+        } catch (InterruptedException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
         }
+      }
 
-        @Override
-        public boolean onGenericMotionEvent(MotionEvent event) {
-            return controlInterp.onGenericMotionEvent(event);
-        }
+      Log.d("Renderer", "onDrawFrame END");
+    }
 
-        @Override
-        public boolean onTouchEvent(MotionEvent event) {
-            return controlInterp.onTouchEvent(event);
-        }
+    public void onSurfaceChanged(GL10 gl, int width, int height) {
+      Log.d("Renderer", String.format("onSurfaceChanged %dx%d", width, height));
 
-        @Override
-        public boolean onKeyDown(int keyCode, KeyEvent event) {
-            return controlInterp.onKeyDown(keyCode, event);
-        }
+      if (surfaceWidth == -1) {
+        surfaceWidth = width;
+        surfaceHeight = height;
+      }
 
-        @Override
-        public boolean onKeyUp(int keyCode, KeyEvent event) {
-            return controlInterp.onKeyUp(keyCode, event);
-        }
+      if (!SDLinited) {
+        SDLLib.nativeInit(false);
+        SDLLib.surfaceChanged(PixelFormat.RGBA_8888, surfaceWidth / resDiv, surfaceHeight / resDiv);
+        SDLinited = true;
+      }
 
-    }  // end of QuakeView
+      // Display display = ((WindowManager)
+      // act.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
+      // Point size = new Point();
+      // display.getSize(size);
+      controlInterp.setScreenSize(surfaceWidth, surfaceHeight);
 
-    class QuakeRenderer implements MyGLSurfaceView.Renderer {
+      // controlInterp.setScreenSize(width, height);
 
-
-        boolean divDone = false;
-        //// new Renderer interface
-        int notifiedflags;
-        boolean SDLinited = false;
-
-        public void onSurfaceCreated(GL10 gl, EGLConfig config) {
-            Log.d("Renderer", "onSurfaceCreated");
-        }
-
-        private void init(int width, int height) {
-
-            Log.i(LOG, "screen size : " + width + "x" + height);
-
-            NativeLib.setScreenSize(width, height);
-
-            Utils.copyPNGAssets(getApplicationContext(), AppSettings.graphicsDir);
-
-            Log.i(LOG, "Quake2Init start");
-
-            //args = "-width 1280 -height 736 +set vid_renderer 1 -iwad tnt.wad -file brutal19.pk3 +set fluid_patchset /sdcard/WeedsGM3.sf2";
-            //args = "+set vid_renderer 1 ";
-            String gzdoom_args = "-width " + surfaceWidth / resDiv + " -height " + surfaceHeight / resDiv + " +set vid_renderer 1 ";
-            String[] args_array = Utils.createArgs(args + gzdoom_args);
-
-            int audioSample = AudioTrack.getNativeOutputSampleRate(AudioTrack.MODE_STREAM);
-            Log.d(LOG, "audioSample = " + audioSample);
-
-            if ((audioSample != 48000) && (audioSample != 44100)) //Just in case
-                audioSample = 48000;
-
-            int ret = NativeLib.init(AppSettings.graphicsDir, audioSample, args_array, 0, gamePath);
-
-            Log.i(LOG, "Quake2Init done");
-
-        }
-
-        public void onDrawFrame(GL10 gl) {
-
-            Log.d("Renderer", "onDrawFrame");
-
-            if (!divDone) {
-                handlerUI.post(() -> {
-                    mGLSurfaceView.getHolder().setFixedSize(surfaceWidth / resDiv, surfaceHeight / resDiv);
-                    divDone = true;
-                });
-            }
-
-            if (divDone) {
-                init(surfaceWidth / resDiv, surfaceHeight / resDiv);
-            } else {
-                try {
-                    Thread.sleep(200);
-                } catch (InterruptedException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
-            }
-
-            Log.d("Renderer", "onDrawFrame END");
-
-        }
-
-        public void onSurfaceChanged(GL10 gl, int width, int height) {
-            Log.d("Renderer", String.format("onSurfaceChanged %dx%d", width, height));
-
-            if (surfaceWidth == -1) {
-                surfaceWidth = width;
-                surfaceHeight = height;
-            }
-
-            if (!SDLinited) {
-                SDLLib.nativeInit(false);
-                SDLLib.surfaceChanged(PixelFormat.RGBA_8888, surfaceWidth / resDiv, surfaceHeight / resDiv);
-                SDLinited = true;
-            }
-
-            //Display display = ((WindowManager) act.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
-            //Point size = new Point();
-            //display.getSize(size);
-            controlInterp.setScreenSize(surfaceWidth, surfaceHeight);
-
-            //controlInterp.setScreenSize(width, height);
-
-        }
-    } // end of QuakeRenderer
+    }
+  } // end of QuakeRenderer
 }

@@ -1,11 +1,13 @@
 name: Android CI
 
+
 on:
   push:
     #branches: [ master ]
 #  pull_request:
     #branches: [ master ]
   workflow_dispatch:
+
 
 jobs:
   build:
@@ -36,16 +38,24 @@ jobs:
           cd doom
           ../gradlew assembleRelease
 
-    - uses: r0adkll/sign-android-release@v1
-      name: Sign app APK
-      # ID used to access action output
-      id: sign_app
-      with:
-        releaseDirectory: build/outputs/apk/release
-        signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-        alias: ${{ secrets.ALIAS }}
-        keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
 
+#    - uses: r0adkll/sign-android-release@v1
+#      name: Sign app APK
+#      # ID used to access action output
+#      id: sign_app
+#      with:
+#        releaseDirectory: build/outputs/apk/release
+#        signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+#        alias: ${{ secrets.ALIAS }}
+#        keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+
+
+    - name: Sign APK with debug key
+      run: |
+          cd ..
+          wget https://github.com/patrickfav/uber-apk-signer/releases/download/v1.3.0/uber-apk-signer-1.3.0.jar
+          java -jar uber-apk-signer-1.3.0.jar -a doom/build/outputs/apk/release --out doom/build/outputs/apk/release/signed
+      
     - uses: actions/upload-artifact@v3
       name: upload APKs
       with:

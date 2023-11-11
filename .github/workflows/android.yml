@@ -30,7 +30,7 @@ jobs:
         add-to-path: true
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
-    - name: Build amd sign Freedoom-Android
+    - name: Build and sign Freedoom-Android
       run: |
           pushd doom/src/main/jni
           ndk-build

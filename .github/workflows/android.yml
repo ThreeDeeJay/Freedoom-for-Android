@@ -30,13 +30,15 @@ jobs:
         add-to-path: true
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
-    - name: Build Freedoom-Android
+    - name: Build amd sign Freedoom-Android
       run: |
           pushd doom/src/main/jni
           ndk-build
           popd
           cd doom
           ../gradlew assembleRelease
+          wget https://github.com/patrickfav/uber-apk-signer/releases/download/v1.3.0/uber-apk-signer-1.3.0.jar
+          java -jar uber-apk-signer-1.3.0.jar -a build/outputs/apk/release --out build/outputs/apk/release/signed
 
 
 #    - uses: r0adkll/sign-android-release@v1
@@ -48,13 +50,6 @@ jobs:
 #        signingKeyBase64: ${{ secrets.SIGNING_KEY }}
 #        alias: ${{ secrets.ALIAS }}
 #        keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-
-
-    - name: Sign APK with debug key
-      run: |
-          cd ..
-          wget https://github.com/patrickfav/uber-apk-signer/releases/download/v1.3.0/uber-apk-signer-1.3.0.jar
-          java -jar uber-apk-signer-1.3.0.jar -a doom/build/outputs/apk/release --out doom/build/outputs/apk/release/signed
       
     - uses: actions/upload-artifact@v3
       name: upload APKs

@@ -5,29 +5,27 @@ on:
     #branches: [ master ]
   pull_request:
     #branches: [ master ]
+  workflow_dispatch:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3.0.0
       with:
         submodules: 'true'
-
+    - uses: gradle/wrapper-validation-action@v1
+      name: Check if Gradle wrapper is legit
     - name: set up JDK 11
       uses: actions/setup-java@v2
       with:
         java-version: '11'
         distribution: 'adopt'
-
     - name: setup android-ndk
       uses: nttld/setup-ndk@v1
       with:
         ndk-version: r21e
         add-to-path: true
-      
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Build Freedoom-Android
@@ -48,3 +46,8 @@ jobs:
       #  alias: ${{ secrets.ALIAS }}
         #keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
 
+    - uses: actions/upload-artifact@v3
+      name: upload APKs
+      with:
+        name: FreeDoom-android
+        path: doom/build/

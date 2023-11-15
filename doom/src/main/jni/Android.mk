@@ -12,7 +12,7 @@ include $(TOP_DIR)/AudioLibs_OpenTouch/openal/Android.mk
 include $(TOP_DIR)/AudioLibs_OpenTouch/android_external_flac/Android.mk
 
 include $(TOP_DIR)/jpeg8d/Android.mk
-include $(TOP_DIR)/gzdoom_android/mobile/Android.mk
+include $(TOP_DIR)/gzdoom_android/Android.mk
 
 include $(TOP_DIR)/MobileTouchControls/Android.mk
 

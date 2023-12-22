@@ -4,7 +4,7 @@ apply plugin: 'kotlin-android-extensions'
 
 buildscript {
     ext {
-        kotlin_version = '1.6.10'
+        kotlin_version = '1.9.22'
         android_support_version = "26.1.0"
     }
 
